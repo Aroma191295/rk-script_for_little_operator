@@ -1,1 +1,0 @@
-# rk-script_for_little_operator
