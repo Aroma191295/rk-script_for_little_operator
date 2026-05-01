@@ -5,6 +5,7 @@ qq.sh - expect скрипт по входу через telnet и ssh под св
 PASS - это ваш пароль от Active Directory
 PASS_SSH - пароль от админа
 
+```
 scripts_for_the_litle_ones/
 │
 ├── main.py              # Точка входа. Сюда мы пишем логику "что сделать".
@@ -26,3 +27,4 @@ scripts_for_the_litle_ones/
     ├── snr.py
     ├── zyxel.py
     └── dlink.py
+```
