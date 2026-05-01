@@ -1,9 +1,6 @@
 #!/usr/bin/expect -f
 # Использовать: ./ltp.exp <HOST> <USER_PORT>
 
-# Задаем таймаут ожидания (в секундах)
-set timeout 10
-
 # Проверяем количество аргументов
 if {$argc < 2} {
     puts "Usage: $argv0 <HOST> <USER_PORT>"
@@ -13,6 +10,7 @@ if {$argc < 2} {
 set HOST [lindex $argv 0]
 set USER_PORT "gpon-onu_[lindex $argv 1]"
 set DELAY 1
+set timeout 10
 
 # Если нужно, можно захардкодить: set USER "admin"
 set USER $env(USER)
