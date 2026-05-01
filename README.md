@@ -1,4 +1,4 @@
-script by tg@aroma191295
+,,`script by tg@aroma191295
 
 qq.sh - expect скрипт по входу через telnet и ssh под своими данными или админом.
 
@@ -15,16 +15,22 @@ scripts_for_the_litle_ones/
 │   ├── telnet.py        # Пакет по подключению через telnet
 │   └── ssh.py           # Пакет по подключению через ssh
 │
-└── vendors/             # Папка со спецификой брендов
-    ├── __init__.py      # Пустой файл, чтобы Python считал это пакетом
-    ├── eltex_eth.py
-    ├── eltex_ltp.py
-    ├── eltex_ma.py
-    ├── eltex_lte.py
-    ├── zte320.py
-    ├── zte610.py
-    ├── cdata.py
-    ├── snr.py
-    ├── zyxel.py
-    └── dlink.py
+├── vendors/             # Папка со спецификой брендов
+│   ├── __init__.py      # Пустой файл, чтобы Python считал это пакетом
+│   ├── eltex_eth.py
+│   ├── eltex_ltp.py
+│   ├── eltex_ma.py
+│   ├── eltex_lte.py
+│   ├── zte320.py
+│   ├── zte610.py
+│   ├── cdata.py
+│   ├── snr.py
+│   ├── zyxel.py
+│   └── dlink.py
+│
+└── quick_script/        # Папка с простыми скриптами состоящими из except
+    ├── qq.sh
+    ├── zte.sh
+    └── ltp.sh
+
 ```
