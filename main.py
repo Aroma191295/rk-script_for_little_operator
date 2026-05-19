@@ -14,7 +14,7 @@ from core.ssh import SSHClient
 
 # Импорт вендоров
 from vendors.eltex_eth import EltexEthDiagnostic
-# from vendors.cdata import CDataDiagnostic
+from vendors.zte320 import ZTE320Diagnostic
 
 # Список вендоров с диагностикой
 VENDOR_CONFIG = {
@@ -24,12 +24,12 @@ VENDOR_CONFIG = {
         'env_user': 'USER',
         'env_pass': 'PASS'
     },
-    # 'c-data': {
-    #     'class': CDataDiagnostic,
-    #     'default_proto': 'ssh',
-    #     'env_user': 'USER_SSH',
-    #     'env_pass': 'PASS_SSH'
-    # },
+    'zte320': {
+        'class': ZTE320Diagnostic,
+        'default_proto': 'telnet',
+        'env_user': 'USER',
+        'env_pass': 'PASS'
+    },
 }
 
 # Парсер .env файлов
@@ -65,8 +65,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Примеры использования:
   python3 main.py 10.0.0.1 -v eltex -p gi1/0/23  (Подключится по Telnet с USER/PASS)
-  python3 main.py 10.0.0.1 -v c-data -p Gi0/1       (Подключится по SSH с USER_SSH/PASS_SSH)
-  python3 main.py 10.0.0.1 -p ssh              (Базовый SSH: возьмет дефолтные переменные)"""
+  python3 main.py 10.0.0.1 -v c-data -p Gi0/1    (Подключится по SSH с USER_SSH/PASS_SSH)
+  python3 main.py 10.0.0.1 -P ssh                (Базовый SSH: возьмет дефолтные переменные)"""
     )
 # Обязательные аргументы
     parser.add_argument("ip", help="IP адрес коммутатора")
@@ -83,7 +83,7 @@ def main():
         help="Номер порта для диагностики (например: gi1/0/1)"
     )
     parser.add_argument(
-        "--proto",
+        "--proto", "-P",
         choices=['telnet', 'ssh'],
         help="Принудительно указать протокол (переопределяет настройку вендора)"
     )
@@ -118,6 +118,7 @@ def main():
         else:
             username = os.environ.get('USER')
             password = os.environ.get('PASS')
+            
     if not password:
         print(f"❌ Пароль не найден!")
         if vendor_name:

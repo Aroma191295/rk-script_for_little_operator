@@ -1,10 +1,15 @@
 script by tg@aroma191295
 
-qq.sh - expect скрипт по входу через telnet и ssh под своими данными или админом.
+Переменные для входа требуется занести в фаил .env в корень проекта
+Требуется занести следующие переменные:
+```
+USER
+PASS
+USER_SSH
+PASS_SSH
+```
 
-PASS - это ваш пароль от Active Directory
-PASS_SSH - пароль от админа
-
+Ветка проекта
 ```
 scripts_for_the_litle_ones/
 │

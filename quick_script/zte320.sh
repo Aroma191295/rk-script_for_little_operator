@@ -29,7 +29,6 @@ expect -re {[#>]$}
 # Список команд
 set commands [list \
     "show gpon onu detail-info $USER_PORT" \
-    " " \
     "show pon power attenuation $USER_PORT" \
     "show mac-real-time gpon onu $USER_PORT" \
     "show gpon remote-onu interface eth $USER_PORT" \
