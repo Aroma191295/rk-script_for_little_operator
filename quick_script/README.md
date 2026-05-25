@@ -4,5 +4,6 @@ alias zte320='<расположение_папки>/git/rk-script_for_little_ope
 alias ltp='<расположение_папки>/git/rk-script_for_little_operator/quick_script/ltp.sh'
 alias qq='<расположение_папки>/git/rk-script_for_little_operator/quick_script/qq.sh telnet'
 alias qq-ssh='<расположение_папки>/git/rk-script_for_little_operator/quick_script/qq.sh ssh'
+alias eltex='<расположение_папки>/git/rk-script_for_little_operator/quick_script/eltex_eth.sh'
 ```
 qq.sh - expect скрипт по входу через telnet и ssh под своими данными или админом.
