@@ -1,5 +1,5 @@
 #!/usr/bin/expect -f
-# Использовать: ./ltp.exp <HOST> <USER_PORT>
+# Использовать: ./zte320.sh <HOST> <USER_PORT>
 
 # Проверяем количество аргументов
 if {$argc < 2} {
@@ -21,7 +21,7 @@ spawn telnet $HOST
 expect {
     "Username:" { send "$USER\r"; exp_continue }
     "Password:" { send "$PASS\r" }
-    timeout { puts "Таймаут при ожидании запроса пароля"; exit 1 }
+    timeout { puts "Нет ответа по таймауту"; exit 1 }
 }
 
 expect -re {[#>]$}

@@ -1,7 +1,6 @@
 #!/usr/bin/expect -f
 # Использовать: ./ltp.exp <HOST> <USER_PORT>
 
-
 # Проверяем количество аргументов
 if {$argc < 2} {
     puts "Usage: $argv0 <HOST> <USER_PORT>"
@@ -22,7 +21,7 @@ spawn telnet $HOST
 expect {
     "login" { send "$USER\r"; exp_continue }
     "Password:" { send "$PASS\r" }
-    timeout { puts "Таймаут при ожидании запроса пароля"; exit 1 }
+    timeout { puts "Нет ответа по таймауту"; exit 1 }
 }
 
 expect -re {[#>]$}
