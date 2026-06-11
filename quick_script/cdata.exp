@@ -1,0 +1,91 @@
+#!/usr/bin/expect -f
+
+################## Инструкция ######################################
+
+## Использовать: cdata 10.0.0.1 1 1
+
+## Как создать короткий alias: 
+## Убираете # и правите расположение файла, а далее копируете и вставляйте в терминал
+
+# cat >> ~/.bash_aliases << EOF
+# alias cdata='<расположение файла>/cdata.sh telnet'
+# EOF
+
+# chmod 700 <расположение файла>/cdata.sh - дать права на выполнение
+
+# source ./.bashrc - перечитать фаил с aliases
+
+####################################################################
+
+# Проверяем количество аргументов
+if {$argc < 3} {
+    puts "Usage: $argv0 <HOST> <USER_TREE> <USER_PORT>"
+    exit 1
+}
+
+set HOST [lindex $argv 0]
+set USER_TREE [lindex $argv 1]
+set USER_PORT [lindex $argv 2]
+set DELAY 1
+set timeout 10
+
+# Если хотите захардкодить, напишите: set USER "admin"
+set USER $env(USER_SSH)
+set PASS $env(PASS_SSH)
+set PASS_ENABLE $env(PASS_ENABLE)
+
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST
+
+expect {
+    # Проверка на доступность
+    timeout { puts "Timeout"; exit 1 }
+    eof { puts "Connection closed"; exit 1 }
+    "Connection refused" { puts "Connection refused"; exit 1 }
+
+    # Подтверждение нового хоста
+    "Are you sure you want to continue connecting (yes/no)?" {
+        send "yes\r"
+        exp_continue
+    }    
+    
+    # Запрос пароля
+    "password:" {
+        send "$PASS\r"
+        exp_continue
+    }
+            
+    -re {[a-zA-Z0-9\-]+[#>]} {
+    }
+}
+
+# Включаем режим enable
+send "enable\r"
+expect {
+    -re {[Pp]assword:?} {
+        # Если enable запрашивает пароль, вводим тот же самый
+        send "$PASS\r"
+        expect -re {[#>] ?$}
+    }
+    -re {[#>] ?$} {
+        # Если enable без пароля, просто продолжаем
+    }
+}
+
+#требуется сделать динамичным 3 строчку с 0/0 и 0/1
+set commands [ list \
+    "config"
+    "interface gpon 0/0" 
+    "show ont info $USER_TREE $USER_PORT" \
+    "show ont port state $USER_TREE $USER_PORT eth all" \
+    "show ont port learned-mac $USER_TREE $USER_PORT eth 1" \
+    "show ont  optical-info $USER_TREE $USER_PORT" \
+]
+
+foreach cmd $commands {
+    send "$cmd\r"
+    expect -re {[#>]$}
+    sleep $DELAY
+}
+
+interact
