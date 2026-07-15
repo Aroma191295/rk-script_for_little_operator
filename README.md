@@ -18,7 +18,8 @@ scripts_for_the_litle_ones/
 ├── core/                # Папка с "движком"
 │   ├── __init__.py      # Пустой файл, чтобы Python считал это пакетом
 │   ├── telnet.py        # Пакет по подключению через telnet
-│   └── ssh.py           # Пакет по подключению через ssh
+│   ├── ssh.py           # Пакет по подключению через ssh
+│   └── create_env.py    # Пакет по созданию .env если его нету
 │
 ├── vendors/             # Папка со спецификой брендов
 │   ├── __init__.py      # Пустой файл, чтобы Python считал это пакетом
@@ -34,9 +35,12 @@ scripts_for_the_litle_ones/
 │   └── dlink.py
 │
 └── quick_script/        # Папка с простыми скриптами состоящими из except
-    ├── ltp.sh
-    ├── qq.sh
-    └── zte320.sh
+    ├── ltp.exp
+    ├── qq.exp
+    ├── eltex_eth.exp
+    ├── ltp.exp
+    ├── cdata.exp        #нужно доделать
+    └── zte320.exp
 
 ```
 

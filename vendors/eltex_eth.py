@@ -6,6 +6,25 @@ class EltexEthDiagnostic:
         self.client = client
         self.ip = client.ip
 
+    def bounce_port(self, port, delay=3):
+        self.client.clear_buffer()
+        cmds = [
+            "configure terminal",
+            f"interface {port}",
+            "shutdown",
+        ]
+        for cmd in cmds:
+            self.client.send_command(cmd, wait_for_prompt=True)
+
+        print(f"⏳ Порт {port} выключен, ждём {delay} сек...")
+        time.sleep(delay)
+
+        self.client.send_command("no shutdown", wait_for_prompt=True)
+        self.client.send_command("end", wait_for_prompt=True)  # или exit / exit
+
+        print(f"✅ Порт {port} снова включён")
+        return self.get_port_status(port)
+
     def get_mac_table(self, port=None):
         self.client.clear_buffer()
 
@@ -149,3 +168,35 @@ class EltexEthDiagnostic:
         print()
 
         return results
+
+    def interactive_menu(self, port):
+        while True:
+            print(f"\n{'='*50}")
+            print(f"Порт: {port} @ {self.ip}")
+            print("1. Повторить диагностику")
+            print("2. Перезагрузить порт (bounce)")
+            print("3. MAC на порту")
+            print("4. Ошибки порта")
+            print("5. Сырой CLI")
+            print("0. Выход")
+            print("="*50)
+
+            choice = input("Выбор: ").strip()
+
+            if choice == "1":
+                self.analyze_port(port)
+            elif choice == "2":
+                confirm = input(f"⚠️ Bounce {port}? (y/n): ").lower()
+                if confirm in ("y", "д"):
+                    print(self.bounce_port(port))
+            elif choice == "3":
+                info = self.get_mac_table(port)
+                print("\n".join(info["macs"]) or "MAC нет")
+            elif choice == "4":
+                print(self.get_port_errors(port))
+            elif choice == "5":
+                self.client.interactive_mode()
+            elif choice == "0":
+                break
+            else:
+                print("Неизвестный пункт")

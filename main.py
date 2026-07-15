@@ -11,10 +11,12 @@ import argparse
 # Импорт модулей подключения
 from core.telnet import TelnetClient
 from core.ssh import SSHClient
+from core.create_env import ensure_env_file
 
 # Импорт вендоров
 from vendors.eltex_eth import EltexEthDiagnostic
 from vendors.zte320 import ZTE320Diagnostic
+from vendors.cdata import CDataDiagnostic
 
 # Список вендоров с диагностикой
 VENDOR_CONFIG = {
@@ -30,6 +32,18 @@ VENDOR_CONFIG = {
         'env_user': 'USER',
         'env_pass': 'PASS'
     },
+    # 'cdata': {
+    #     'class': CDataDiagnostic,
+    #     'default_proto': 'ssh',
+    #     'env_user': 'USER_SSH',
+    #     'env_pass': 'PASS_SSH',
+    # },
+    # 'ltp': {
+    #     'class': EltexLTPDiagnostic,
+    #     'default_proto': 'telnet',
+    #     'env_user': 'USER',
+    #     'env_pass': 'PASS',
+    # },
 }
 
 # Парсер .env файлов
@@ -58,15 +72,18 @@ def load_env_file():
                 print(f"⚠️ Ошибка чтения {filepath}: {e}")
 
 def main():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    ensure_env_file(script_dir)
     load_env_file()
 
     parser = argparse.ArgumentParser(
-        description="🔧 Скрипт для диагностики абонентских портов",
+        description="""Перед запуском прочитайте readme
+Скрипт для диагностики абонентских портов""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Примеры использования:
-  python3 main.py 10.0.0.1 -v eltex -p gi1/0/23  (Подключится по Telnet с USER/PASS)
-  python3 main.py 10.0.0.1 -v c-data -p Gi0/1    (Подключится по SSH с USER_SSH/PASS_SSH)
-  python3 main.py 10.0.0.1 -P ssh                (Базовый SSH: возьмет дефолтные переменные)"""
+    python3 main.py 10.0.0.1 -v eltex -p gi1/0/23
+    python3 main.py 10.0.0.1 -v cdata
+    python3 main.py 10.0.0.1 -P ssh"""
     )
 # Обязательные аргументы
     parser.add_argument("ip", help="IP адрес коммутатора")
@@ -80,12 +97,17 @@ def main():
     )
     parser.add_argument(
         "-p", "--port",
-        help="Номер порта для диагностики (например: gi1/0/1)"
+        help="Номер порта для диагностики"
     )
     parser.add_argument(
         "--proto", "-P",
         choices=['telnet', 'ssh'],
         help="Принудительно указать протокол (переопределяет настройку вендора)"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="debug"
     )
 
     if len(sys.argv) == 1:
@@ -106,7 +128,7 @@ def main():
     else:
         proto = 'telnet'
 
- # Приоритет: 1. Дефолт вендора -> 2. Протокол
+ # Приоритет: 1. Дефолт вендора -> 2. Протокол -> 3. Глобальный дефолт (USER и PASS)
     if vendor_name:
         cfg = VENDOR_CONFIG[vendor_name]
         username = os.environ.get(cfg['env_user'])
@@ -119,13 +141,13 @@ def main():
             username = os.environ.get('USER')
             password = os.environ.get('PASS')
             
-    if not password:
-        print(f"❌ Пароль не найден!")
-        if vendor_name:
-            print(f"💡 Для вендора '{vendor_name}' задайте переменную {VENDOR_CONFIG[vendor_name]['env_pass']} в файле .env")
-        else:
-            print(f"💡 Задайте переменные USER/PASS или USER_SSH/PASS_SSH в файле .env")
-        sys.exit(1)
+    # if not password:
+    #     print(f"❌ Пароль не найден!")
+    #     if vendor_name:
+    #         print(f"💡 Для вендора '{vendor_name}' задайте переменную {VENDOR_CONFIG[vendor_name]['env_pass']} в файле .env")
+    #     else:
+    #         print(f"💡 Задайте переменные USER/PASS или USER_SSH/PASS_SSH в файле .env")
+    #     sys.exit(1)
 
     if vendor_name:
         print(f"🔌 Подключение к {ip} [{vendor_name.upper()}] через {proto.upper()}...")
@@ -134,8 +156,13 @@ def main():
 
     print(f"👤 Пользователь: {username}")
 
-    ClientClass = SSHClient if proto == 'ssh' else TelnetClient
-    client = ClientClass(ip, username, password)
+    if proto == 'ssh':
+        client = SSHClient(ip, username, password, debug=args.debug)
+    else:
+        client = TelnetClient(ip, username, password)
+
+    if args.debug:
+        print("🛠  DEBUG: сырой вывод команд включён\n")
 
     try:
         if not client.connect():
@@ -150,7 +177,10 @@ def main():
 
         if vendor_name:
             DiagnosticClass = VENDOR_CONFIG[vendor_name]['class']
-            diag = DiagnosticClass(client)
+            if vendor_name == 'cdata':
+                diag = DiagnosticClass(client, debug=args.debug)
+            else:
+                diag = DiagnosticClass(client)
 
             if port:
                 diag.analyze_port(port)
@@ -162,11 +192,20 @@ def main():
                 print(f"⚠️ Порт {port} указан, но вендор не задан. Диагностика недоступна.")
             print("ℹ️ Режим базового подключения (без вендорной диагностики).")
 
-        response = input("🎮 Перейти в интерактивный режим управления? (y/n): ").lower()
-        if response in ['y', 'д']:
-            client.interactive_mode()
+        # response = input("🎮 Перейти в интерактивный режим управления? (y/n): ").lower()
+        # if response in ['y', 'д']:
+        #     client.interactive_mode()
+        # else:
+        #     print("Завершение работы")
+
+        if port and hasattr(diag, "interactive_menu"):
+            response = input("🎮 Открыть меню быстрых действий? (y/n): ").lower()
+            if response in ["y", "д"]:
+                diag.interactive_menu(port)
         else:
-            print("Завершение работы")
+            response = input("🎮 Перейти в сырой CLI? (y/n): ").lower()
+            if response in ["y", "д"]:
+                client.interactive_mode()
 
     except KeyboardInterrupt:
         print("\n\n⚠️  Прервано пользователем")
