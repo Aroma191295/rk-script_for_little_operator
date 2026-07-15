@@ -1,7 +1,7 @@
 script by tg@aroma191295
 
-Переменные для входа требуется занести в фаил .env в корень проекта
-Требуется занести следующие переменные:
+Переменные для входа в фаиле .env для проекта \
+Требуется следующие переменные:
 ```
 USER
 PASS
@@ -23,23 +23,22 @@ scripts_for_the_litle_ones/
 │
 ├── vendors/             # Папка со спецификой брендов
 │   ├── __init__.py      # Пустой файл, чтобы Python считал это пакетом
-│   ├── cdata.py
+│   ├── cdata.py         # WIP
 │   ├── eltex_eth.py
-│   ├── eltex_ltp.py
-│   ├── eltex_ma.py
-│   ├── eltex_lte.py
-│   ├── zte320.py
-│   ├── zte610.py
-│   ├── snr.py
-│   ├── zyxel.py
-│   └── dlink.py
+│   ├── eltex_ltp.py     # WIP
+│   ├── eltex_ma.py      # В планах
+│   ├── eltex_lte.py     # В планах
+│   ├── zte320.py        # WIP
+│   ├── zte610.py        # В планах
+│   ├── snr.py           # В планах
+│   ├── zyxel.py         # В планах
+│   └── dlink.py         # В планах
 │
 └── quick_script/        # Папка с простыми скриптами состоящими из except
-    ├── ltp.exp
     ├── qq.exp
     ├── eltex_eth.exp
-    ├── ltp.exp
-    ├── cdata.exp        #нужно доделать
+    ├── ltp.exp          
+    ├── cdata.exp        # WIP
     └── zte320.exp
 
 ```
