@@ -141,14 +141,6 @@ def main():
             username = os.environ.get('USER')
             password = os.environ.get('PASS')
             
-    # if not password:
-    #     print(f"❌ Пароль не найден!")
-    #     if vendor_name:
-    #         print(f"💡 Для вендора '{vendor_name}' задайте переменную {VENDOR_CONFIG[vendor_name]['env_pass']} в файле .env")
-    #     else:
-    #         print(f"💡 Задайте переменные USER/PASS или USER_SSH/PASS_SSH в файле .env")
-    #     sys.exit(1)
-
     if vendor_name:
         print(f"🔌 Подключение к {ip} [{vendor_name.upper()}] через {proto.upper()}...")
     else:
@@ -192,19 +184,11 @@ def main():
                 print(f"⚠️ Порт {port} указан, но вендор не задан. Диагностика недоступна.")
             print("ℹ️ Режим базового подключения (без вендорной диагностики).")
 
-        # response = input("🎮 Перейти в интерактивный режим управления? (y/n): ").lower()
-        # if response in ['y', 'д']:
-        #     client.interactive_mode()
-        # else:
-        #     print("Завершение работы")
-
         if port and hasattr(diag, "interactive_menu"):
-            response = input("🎮 Открыть меню быстрых действий? (y/n): ").lower()
-            if response in ["y", "д"]:
-                diag.interactive_menu(port)
+            diag.interactive_menu(port)
         else:
             response = input("🎮 Перейти в сырой CLI? (y/n): ").lower()
-            if response in ["y", "д"]:
+            if response in ["y", "н"]:
                 client.interactive_mode()
 
     except KeyboardInterrupt:

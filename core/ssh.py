@@ -339,7 +339,7 @@ class SSHClient:
     def interactive_mode(self):
         print(f"\n{'='*70}")
         print(f"💻 ПЕРЕДАЧА УПРАВЛЕНИЯ КОММУТАТОРОМ {self.ip}")
-        print("ℹ️  Для выхода используйте Ctrl+D")
+        print("ℹ️  Для прерывания используйте Ctrl+C")
         print(f"{'='*70}\n")
 
         import termios

@@ -6,7 +6,7 @@ class EltexEthDiagnostic:
         self.client = client
         self.ip = client.ip
 
-    def bounce_port(self, port, delay=3):
+    def reload_port(self, port, delay=3):
         self.client.clear_buffer()
         cmds = [
             "configure terminal",
@@ -20,10 +20,16 @@ class EltexEthDiagnostic:
         time.sleep(delay)
 
         self.client.send_command("no shutdown", wait_for_prompt=True)
-        self.client.send_command("end", wait_for_prompt=True)  # или exit / exit
+        self.client.send_command("end", wait_for_prompt=True)
 
         print(f"✅ Порт {port} снова включён")
+        time.sleep(delay)
+
         return self.get_port_status(port)
+
+    def history_port(self, port):
+        self.client.clear_buffer()
+        self.client.send_command("show logging | include {port}")        
 
     def get_mac_table(self, port=None):
         self.client.clear_buffer()
@@ -55,7 +61,7 @@ class EltexEthDiagnostic:
         output = self.client.send_command(command, wait_for_prompt=True)
 
         if not output:
-            return "Информация о порте не найдена (пустой ответ)"
+            return "Информация о порте не найдена (пустой ответ или ошибка вывода)"
 
         lines = output.split('\n')
         port_line_index = -1
@@ -98,7 +104,6 @@ class EltexEthDiagnostic:
         output = self.client.send_command(command, wait_for_prompt=True)
 
         if output and ("interface" in output.lower() or port.lower() in output.lower()):
-            # Убрал обрезку [:300], конфиг порта обычно короткий, лучше отдавать целиком
             return output.strip()
         return "Описание порта не найдено"
 
@@ -174,29 +179,53 @@ class EltexEthDiagnostic:
             print(f"\n{'='*50}")
             print(f"Порт: {port} @ {self.ip}")
             print("1. Повторить диагностику")
-            print("2. Перезагрузить порт (bounce)")
+            print("2. Перезагрузить порт")
             print("3. MAC на порту")
             print("4. Ошибки порта")
-            print("5. Сырой CLI")
+            print("9. Сырой терминал")
             print("0. Выход")
             print("="*50)
 
             choice = input("Выбор: ").strip()
 
-            if choice == "1":
-                self.analyze_port(port)
-            elif choice == "2":
-                confirm = input(f"⚠️ Bounce {port}? (y/n): ").lower()
-                if confirm in ("y", "д"):
-                    print(self.bounce_port(port))
-            elif choice == "3":
-                info = self.get_mac_table(port)
-                print("\n".join(info["macs"]) or "MAC нет")
-            elif choice == "4":
-                print(self.get_port_errors(port))
-            elif choice == "5":
-                self.client.interactive_mode()
-            elif choice == "0":
-                break
-            else:
-                print("Неизвестный пункт")
+            match choice:
+                case "1":
+                    self.analyze_port(port)
+
+                case "2":
+                    confirm = input(f"⚠️ Дергаем {port}? (yes/no): ").strip().lower()
+                    if confirm == "y":
+                        full = input('Введите полностью "yes" для подтверждения: ').strip().lower()
+                        if full == "yes":
+                            print(self.reload_port(port))
+                        else:
+                            print("Команда отменена")
+                    elif confirm == "yes":
+                        print(self.reload_port(port))
+                    else:
+                        print("Команда отменена")
+
+                case "3":
+                    mac_info = self.get_mac_table(port)
+                    if mac_info['count'] > 0:
+                        print(f"📊 Найдено MAC-адресов: {mac_info['count']}")
+                        print("📋 Список MAC-адресов (первые 5):")
+                        for i, mac in enumerate(mac_info['macs'][:5], 1):
+                            print(f"   {i:2}. {mac}")
+                    else:
+                        print("❌ MAC-адреса не найдены на порту")
+
+                case "4":
+                    print(self.get_port_errors(port))
+
+                case "5":
+                    self.history_port(port)
+
+                case "9":
+                    self.client.interactive_mode()
+
+                case "0":
+                    break
+
+                case _:
+                    print("Неизвестный пункт")

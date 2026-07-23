@@ -12,11 +12,11 @@
 # Создать alias:
 
 # cat >> ~/.bash_aliases << EOF
-# alias qq='<расположение файла>/qq.sh telnet'
-# alias qq-ssh='<расположение файла>/qq.sh ssh'
+# alias qq='<расположение файла>/qq.exp telnet'
+# alias qq-ssh='<расположение файла>/qq.exp ssh'
 # EOF
 
-# chmod 700 <расположение файла>/qq.sh - дать права на выполнение
+# chmod 700 <расположение файла>/qq.exp - дать права на выполнение
 
 # source ./.bashrc - перечитать фаил с alias
 

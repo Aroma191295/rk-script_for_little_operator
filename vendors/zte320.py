@@ -94,3 +94,53 @@ class ZTE320Diagnostic:
         else:
             print("❌ MAC-адреса не найдены на ONU")
         print()
+
+    def interactive_menu(self, port):
+        while True:
+            print(f"\n{'='*50}")
+            print(f"Порт: {port} @ {self.ip}")
+            print("1. Повторить диагностику")
+            print("2. Информация о терминале")
+            print("3. MAC на терминале")
+            print("4. Статус медных портов")
+            print("5. Уровень сигнала по оптики")
+            print("6. Статус видео порта")
+            print("9. Сырой CLI")
+            print("0. Выход")
+            print("="*50)
+
+            choice = input("Выбор: ").strip()
+
+            match choice:
+                case "1":
+                    self.analyze_port(port)
+
+                case "2":
+                    print(self.get_onu_info(port))
+                    
+                case "3":
+                    mac_info = self.get_mac_table(port)
+                    if mac_info['count'] > 0:
+                        print(f"📊 Найдено MAC-адресов: {mac_info['count']}")
+                        for i, mac in enumerate(mac_info['macs'], 1):
+                            print(f"   {i:2}. {mac}")
+                    else:
+                        print("❌ MAC-адреса не найдены на ONU")
+
+                case "4":
+                    print(self.get_eth_status(port))
+
+                case "5":
+                    print(self.get_optical_power(port))
+
+                case "6":
+                    print(self.get_video_status(port))
+
+                case "9":
+                    self.client.interactive_mode()
+
+                case "0":
+                    break
+
+                case _:
+                    print("Неизвестный пункт")
