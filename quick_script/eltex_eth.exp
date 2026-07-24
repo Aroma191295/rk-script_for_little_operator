@@ -4,18 +4,20 @@
 
 ## Использовать:
 
-# eltex 10.0.0.1 1/1/1:1
+# eltex 10.0.0.1 gi1/0/23
 
-## Как создать короткий alias: 
+## Как создать короткий alias:
 ## Убираете # и правите расположение файла, а далее копируете и вставляйте в терминал
 
 # cat >> ~/.bash_aliases << EOF
-# alias eltex='<расположение файла>/eltex.exp telnet'
+# alias eltex='<расположение файла>/eltex_eth.exp'
 # EOF
 
-# chmod 700 <расположение файла>/eltex.exp - дать права на выполнение
+# chmod 700 <расположение файла>/eltex_eth.exp - дать права на выполнение
 
-# source ./.bashrc - перечитать фаил с alias
+# source ~/.bashrc - перечитать файл с alias
+
+# Учётные данные из .env: USER / PASS
 
 ####################################################################
 
@@ -25,14 +27,17 @@ if {$argc < 2} {
     exit 1
 }
 
+set script_dir [file dirname [file normalize [info script]]]
+source [file join $script_dir "dotenv.tcl"]
+init_dotenv $script_dir
+
 set HOST [lindex $argv 0]
 set USER_PORT [lindex $argv 1]
 set DELAY 1
 set timeout 10
 
-# Если хотите захардкодить, напишите: set USER "admin"
-set USER $env(USER)
-set PASS $env(PASS)
+set USER [dotenv_require USER]
+set PASS [dotenv_require PASS]
 
 spawn telnet $HOST
 

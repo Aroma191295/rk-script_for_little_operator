@@ -9,9 +9,9 @@ USER_SSH
 PASS_SSH
 ```
 
-Ветка проекта
+#Ветка проекта
 ```
-scripts_for_the_litle_ones/
+rk-scripts_for_the_litle_operator/
 │
 ├── main.py              # Точка входа. Сюда мы пишем логику "что сделать".
 │
@@ -35,11 +35,10 @@ scripts_for_the_litle_ones/
 │   └── dlink.py         # В планах
 │
 └── quick_script/        # Папка с простыми скриптами состоящими из except
-    ├── qq.exp
-    ├── eltex_eth.exp
-    ├── ltp.exp          
+    ├── qq.exp           # Быстрый вход
+    ├── eltex_eth.exp    # Вход и быстрая диагностика медных eltex 
+    ├── ltp.exp          # Вход и быстрая диагностика LTP
     ├── cdata.exp        # WIP
-    └── zte320.exp
-
+    └── zte320.exp       # Вход и быстрая диагностика ZTE320
 ```
 

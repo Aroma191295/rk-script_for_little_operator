@@ -182,6 +182,7 @@ class EltexEthDiagnostic:
             print("2. Перезагрузить порт")
             print("3. MAC на порту")
             print("4. Ошибки порта")
+            print("5. Проверить логи порта")
             print("9. Сырой терминал")
             print("0. Выход")
             print("="*50)
@@ -219,7 +220,7 @@ class EltexEthDiagnostic:
                     print(self.get_port_errors(port))
 
                 case "5":
-                    self.history_port(port)
+                    print(self.history_port(port))
 
                 case "9":
                     self.client.interactive_mode()

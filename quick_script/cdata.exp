@@ -4,16 +4,19 @@
 
 ## Использовать: cdata 10.0.0.1 1 1
 
-## Как создать короткий alias: 
+## Как создать короткий alias:
 ## Убираете # и правите расположение файла, а далее копируете и вставляйте в терминал
 
 # cat >> ~/.bash_aliases << EOF
-# alias cdata='<расположение файла>/cdata.sh telnet'
+# alias cdata='<расположение файла>/cdata.exp'
 # EOF
 
-# chmod 700 <расположение файла>/cdata.sh - дать права на выполнение
+# chmod 700 <расположение файла>/cdata.exp - дать права на выполнение
 
-# source ./.bashrc - перечитать фаил с aliases
+# source ~/.bashrc - перечитать файл с alias
+
+# Учётные данные из .env: USER_SSH / PASS_SSH
+# Опционально: PASS_ENABLE (если нет — используется PASS_SSH)
 
 ####################################################################
 
@@ -23,17 +26,22 @@ if {$argc < 3} {
     exit 1
 }
 
+set script_dir [file dirname [file normalize [info script]]]
+source [file join $script_dir "dotenv.tcl"]
+init_dotenv $script_dir
+
 set HOST [lindex $argv 0]
 set USER_TREE [lindex $argv 1]
 set USER_PORT [lindex $argv 2]
 set DELAY 1
 set timeout 10
 
-# Если хотите захардкодить, напишите: set USER "admin"
-set USER $env(USER_SSH)
-set PASS $env(PASS_SSH)
-set PASS_ENABLE $env(PASS_ENABLE)
-
+set USER [dotenv_require USER_SSH]
+set PASS [dotenv_require PASS_SSH]
+set PASS_ENABLE [dotenv_get PASS_ENABLE]
+if {$PASS_ENABLE eq ""} {
+    set PASS_ENABLE $PASS
+}
 
 spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST
 
@@ -47,14 +55,14 @@ expect {
     "Are you sure you want to continue connecting (yes/no)?" {
         send "yes\r"
         exp_continue
-    }    
-    
+    }
+
     # Запрос пароля
     "password:" {
         send "$PASS\r"
         exp_continue
     }
-            
+
     -re {[a-zA-Z0-9\-]+[#>]} {
     }
 }
@@ -63,8 +71,7 @@ expect {
 send "enable\r"
 expect {
     -re {[Pp]assword:?} {
-        # Если enable запрашивает пароль, вводим тот же самый
-        send "$PASS\r"
+        send "$PASS_ENABLE\r"
         expect -re {[#>] ?$}
     }
     -re {[#>] ?$} {
@@ -75,7 +82,7 @@ expect {
 #требуется сделать динамичным 3 строчку с 0/0 и 0/1
 set commands [ list \
     "config"
-    "interface gpon 0/0" 
+    "interface gpon 0/0"
     "show ont info $USER_TREE $USER_PORT" \
     "show ont port state $USER_TREE $USER_PORT eth all" \
     "show ont port learned-mac $USER_TREE $USER_PORT eth 1" \

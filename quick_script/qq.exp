@@ -18,13 +18,17 @@
 
 # chmod 700 <расположение файла>/qq.exp - дать права на выполнение
 
-# source ./.bashrc - перечитать фаил с alias
+# source ~/.bashrc - перечитать файл с alias
 
-# Можно заменить переменные PASS и PASS_SSH на необходимые вам.
-# PASS - это ваш пароль от Active Directory
-# PASS_SSH - пароль от админа
+# Учётные данные из .env в корне проекта (рядом с main.py):
+# USER / PASS  — свои (по умолчанию)
+# PASS_SSH     — пароль для режима admin
 
 ####################################################################
+
+set script_dir [file dirname [file normalize [info script]]]
+source [file join $script_dir "dotenv.tcl"]
+init_dotenv $script_dir
 
 # Установка аргументов
 set timeout 10
@@ -34,15 +38,13 @@ set ip [lindex $argv 1]
 if {[llength $argv] >= 3} {
     set user [lindex $argv 2]
 } else {
-    set user $env(USER)   
+    set user [dotenv_require USER]
 }
 
 if {$user != "admin"} {
-    set pass $env(PASS)
-    # set pass "Ваш пароль"
+    set pass [dotenv_require PASS]
 } else {
-    set pass $env(PASS_SSH)
-    # set pass "Админ пароль"
+    set pass [dotenv_require PASS_SSH]
 }
 
 # Проверка протокола
