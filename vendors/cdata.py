@@ -3,10 +3,7 @@ import time
 
 
 class CDataDiagnostic:
-    """Диагностика абонентских ONT на OLT C-Data (GPON)."""
-
     DEFAULT_GPON_INTERFACE = "0/0"
-    DEFAULT_ETH_PORT = "1"
 
     def __init__(self, client, debug=False):
         self.client = client
@@ -131,7 +128,7 @@ class CDataDiagnostic:
 
     def get_mac_table(self, port, eth_port=None):
         tree, ont_id = self._parse_port(port)
-        eth = eth_port or self.DEFAULT_ETH_PORT
+        eth = eth_port
         output = self._run_command(
             f"show ont port learned-mac {tree} {ont_id} eth {eth}"
         )

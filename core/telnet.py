@@ -119,9 +119,8 @@ class TelnetClient:
                         time.sleep(0.2)     # Ждем, пока страница прорисуется
                         continue
                         
-                    # 3. Ни приглашения, ни слова More — значит зависло (таймаут)
                     else:
-                        break 
+                        continue
                         
             # --- ФИНАЛЬНАЯ ОЧИСТКА ВЫВОДА ---
             final_output = output.decode('ascii', errors='ignore')

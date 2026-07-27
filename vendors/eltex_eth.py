@@ -29,7 +29,13 @@ class EltexEthDiagnostic:
 
     def history_port(self, port):
         self.client.clear_buffer()
-        self.client.send_command("show logging | include {port}")        
+        self.client.send_command("terminal datadump", wait_for_prompt=True)
+        output = self.client.send_command(
+            f"show logging | include {port}",
+            wait_for_prompt=True,
+        )
+        self.client.send_command("no terminal datadump", wait_for_prompt=True)
+        return output if output else f"Логи по порту {port} не найдены"
 
     def get_mac_table(self, port=None):
         self.client.clear_buffer()

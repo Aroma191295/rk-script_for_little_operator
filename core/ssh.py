@@ -292,9 +292,8 @@ class SSHClient:
                         output = b''
                         continue
 
-                    # 4. Ни приглашения, ни More — зависло
                     else:
-                        break
+                        continue
 
             # --- ФИНАЛЬНАЯ ОЧИСТКА ВЫВОДА ---
             final_output = self._clean(output.decode('utf-8', errors='ignore'))
