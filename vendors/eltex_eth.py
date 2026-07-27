@@ -1,238 +1,192 @@
 import re
 import time
 
+MAC_PATTERNS = (
+    r"([0-9a-fA-F]{4}\.[0-9a-fA-F]{4}\.[0-9a-fA-F]{4})",
+    r"([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})",
+)
+
+ERROR_KEYWORDS = (
+    "error", "collision", "deferred", "late",
+    "excessive", "oversize", "crc",
+)
+
+LINK_STATE_HINTS = {
+    "nc":  ("🔌", "not connected — нет линка"),
+    "err": ("🔴", "error-disabled — заглушен системой"),
+    "adm": ("🔒", "admin.shutdown — выключен администратором"),
+}
+
+
 class EltexEthDiagnostic:
     def __init__(self, client):
         self.client = client
         self.ip = client.ip
 
-    def reload_port(self, port, delay=3):
+    def _cmd(self, command):
         self.client.clear_buffer()
-        cmds = [
-            "configure terminal",
-            f"interface {port}",
-            "shutdown",
-        ]
-        for cmd in cmds:
-            self.client.send_command(cmd, wait_for_prompt=True)
+        return self.client.send_command(command, wait_for_prompt=True) or ""
 
-        print(f"⏳ Порт {port} выключен, ждём {delay} сек...")
-        time.sleep(delay)
+    def _confirm(self, prompt):
+        answer = input(f"{prompt} (yes/no): ").strip().lower()
+        return answer == "yes"
 
-        self.client.send_command("no shutdown", wait_for_prompt=True)
-        self.client.send_command("end", wait_for_prompt=True)
+    def _print_macs(self, mac_info, limit=5):
+        macs = mac_info["macs"]
+        if not macs:
+            print("MAC-адреса не найдены на порту")
+            return
+        print(f"Найдено MAC: {len(macs)}")
+        for i, mac in enumerate(macs[:limit], 1):
+            print(f"  {i}. {mac}")
+        if len(macs) > limit:
+            print(f"  ... и ещё {len(macs) - limit}")
 
-        print(f"✅ Порт {port} снова включён")
-        time.sleep(delay)
+    def reload_port(self, port, delay=3):
+        try:
+            for cmd in ("configure terminal", f"interface {port}", "shutdown"):
+                self._cmd(cmd)
+            print(f"⏳ Порт {port} выключен, ждём {delay} сек...")
+            time.sleep(delay)
+        finally:
+            for cmd in ("no shutdown", "end"):
+                self._cmd(cmd)
+            print(f"✅ Порт {port} снова включён")
 
         return self.get_port_status(port)
 
     def history_port(self, port):
-        self.client.clear_buffer()
-        self.client.send_command("terminal datadump", wait_for_prompt=True)
-        output = self.client.send_command(
-            f"show logging | include {port}",
-            wait_for_prompt=True,
-        )
-        self.client.send_command("no terminal datadump", wait_for_prompt=True)
-        return output if output else f"Логи по порту {port} не найдены"
+        try:
+            self._cmd("terminal datadump")
+            output = self._cmd(f"show logging | include {port}")
+        finally:
+            self._cmd("no terminal datadump")
+        return output.strip() or f"Логи по порту {port} не найдены"
 
-    def get_mac_table(self, port=None):
-        self.client.clear_buffer()
-
-        command = f"show mac address-table interface {port}"
-        output = self.client.send_command(command, wait_for_prompt=True)
-
-        mac_patterns = [
-            r'([0-9a-fA-F]{4}\.[0-9a-fA-F]{4}\.[0-9a-fA-F]{4})',
-            r'([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})',
-        ]
-
+    def get_mac_table(self, port):
+        output = self._cmd(f"show mac address-table interface {port}")
         macs = []
-        for pattern in mac_patterns:
+        for pattern in MAC_PATTERNS:
             macs.extend(re.findall(pattern, output))
-
-        unique_macs = list(set(macs))
-
-        return {
-            'output': output,
-            'macs': unique_macs,
-            'count': len(unique_macs)
-        }
+        unique = list(dict.fromkeys(macs))
+        return {"output": output, "macs": unique, "count": len(unique)}
 
     def get_port_status(self, port):
-        self.client.clear_buffer()
-
-        command = f"show interfaces status {port}"
-        output = self.client.send_command(command, wait_for_prompt=True)
-
+        output = self._cmd(f"show interfaces status {port}").strip()
         if not output:
-            return "Информация о порте не найдена (пустой ответ или ошибка вывода)"
+            return f"{port}: нет ответа от устройства"
 
-        lines = output.split('\n')
-        port_line_index = -1
-        port_line = None
+        port_lower = port.lower()
+        port_line = next(
+            (line for line in output.splitlines()
+            if line.strip().lower().startswith(port_lower)),
+            None,
+        )
+        if not port_line:
+            return f"{port}: статус не распознан\n{output}"
 
-        for i, line in enumerate(lines):
-            stripped_line = line.strip().lower()
-            port_lower = port.lower()
+        down = re.search(r"Down\s*\((nc|adm|err)\)", port_line, re.IGNORECASE)
+        if down:
+            code = down.group(1).lower()
+            return f"{port}: Down ({code}) — {LINK_STATE_HINTS[code]}"
 
-            if stripped_line.startswith(port_lower):
-                rest_of_line = stripped_line[len(port_lower):]
-                if not rest_of_line or rest_of_line[0].isspace():
-                    port_line_index = i
-                    port_line = line
-                    break
+        if re.search(r"\bUp\b", port_line, re.IGNORECASE):
+            return f"{port}: Up — линк есть"
 
-        if port_line_index == -1:
-            for line in lines:
-                if "invalid" in line.lower() or "error" in line.lower() or "not found" in line.lower():
-                    return f"❌ Ошибка устройства: {line.strip()}"
-            return (f"⚠️ Строка с указанным портом не найдена в выводе.\n"
-                    f"⚠️ Возможно, порт указан неверно. Требуется полное имя (например, gi1/0/1), у вас указано: {port}")
+        return f"{port}: статус не распознан\n{port_line}"
 
-        relevant_lines = [port_line]
-
-        for i in range(port_line_index - 1, -1, -1):
-            prev_line = lines[i]
-
-            if not prev_line.strip() or '#' in prev_line or '>' in prev_line:
-                break
-
-            relevant_lines.insert(0, prev_line)
-
-        return '\n'.join(relevant_lines)
-
-    def get_port_description(self, port):
-        self.client.clear_buffer()
-
-        command = f"show running-config interface {port}"
-        output = self.client.send_command(command, wait_for_prompt=True)
-
-        if output and ("interface" in output.lower() or port.lower() in output.lower()):
-            return output.strip()
-        return "Описание порта не найдено"
+    def get_port_config(self, port):
+        output = self._cmd(f"show running-config interface {port}").strip()
+        return output or "Конфигурация порта не найдена"
 
     def get_port_errors(self, port):
-        self.client.clear_buffer()
-        command = f"show interfaces counters {port}"
-        output = self.client.send_command(command, wait_for_prompt=True)
-
+        output = self._cmd(f"show interfaces counters {port}")
         if not output:
-            return "Не удалось получить счетчики"
+            return "Не удалось получить счётчики"
 
-        lines = output.split('\n')
-        analyzed_errors = []
-        keywords = ['error', 'collision', 'deferred', 'late', 'excessive', 'oversize', 'crc']
-
-        for line in lines:
+        found = []
+        for line in output.splitlines():
             line_lower = line.lower()
-            if any(kw in line_lower for kw in keywords):
-                match = re.search(r':\s*(\d+)\s*$', line)
-                if match:
-                    value = int(match.group(1))
-                    if value > 0:
-                        analyzed_errors.append(f"🔴 {line.strip()}")
-                    else:
-                        analyzed_errors.append(f"✅ {line.strip()}")
-        if analyzed_errors:
-            return "\n".join(analyzed_errors)
-        return "Счетчики ошибок не найдены в выводе"
+            if not any(kw in line_lower for kw in ERROR_KEYWORDS):
+                continue
+            match = re.search(r":\s*(\d+)\s*$", line)
+            if not match:
+                continue
+            value = int(match.group(1))
+            if value > 0:
+                found.append(f"⚠ {line.strip()}")
+
+        return "\n".join(found) if found else "Ненулевых ошибок нет"
 
     def analyze_port(self, port):
-        print(f"\n{'='*70}")
-        print(f"🔍 АНАЛИЗ ПОРТА {port} НА КОММУТАТОРЕ {self.ip}")
-        print(f"{'='*70}\n")
+        print(f"\n{'=' * 70}")
+        print(f"Анализ порта {port} на {self.ip}")
+        print(f"{'=' * 70}\n")
 
-        results = {}
-
-        print("📊 СТАТУС ПОРТА:")
+        print("Статус:")
         status = self.get_port_status(port)
-        print(status)
-        results['status'] = status
-        print()
+        print(status, end="\n\n")
 
-        print("📝 КОНФИГУРАЦИЯ ПОРТА:")
-        desc = self.get_port_description(port)
-        print(desc)
-        results['description'] = desc
-        print()
+        print("Конфигурация:")
+        config = self.get_port_config(port)
+        print(config, end="\n\n")
 
-        print("⚠️ ОШИБКИ ИНТЕРФЕЙСА (Counters):")
-        errors_info = self.get_port_errors(port)
-        print(errors_info)
-        results['errors'] = errors_info
-        print()
+        print("Ошибки:")
+        errors = self.get_port_errors(port)
+        print(errors, end="\n\n")
 
-        print("🖧 MAC-АДРЕСА НА ПОРТУ:")
+        print("MAC:")
         mac_info = self.get_mac_table(port)
-        if mac_info['count'] > 0:
-            print(f"📊 Найдено MAC-адресов: {mac_info['count']}")
-            print("📋 Список MAC-адресов (первые 5):")
-            for i, mac in enumerate(mac_info['macs'][:5], 1):
-                print(f"   {i:2}. {mac}")
-            if mac_info['count'] > 5:
-                print(f"   ... и еще {mac_info['count'] - 5} адресов")
-        else:
-            print("❌ MAC-адреса не найдены на порту")
-        results['mac_count'] = mac_info['count']
+        self._print_macs(mac_info)
         print()
 
-        return results
+        return {
+            "status": status,
+            "config": config,
+            "errors": errors,
+            "mac_count": mac_info["count"],
+        }
 
     def interactive_menu(self, port):
+        actions = {
+            "1": lambda: self.analyze_port(port),
+            "2": lambda: print(self.get_port_status(port)),
+            "3": lambda: print(self.get_port_config(port)),
+            "4": lambda: self._print_macs(self.get_mac_table(port)),
+            "5": lambda: print(self.get_port_errors(port)),
+            "6": lambda: print(self.history_port(port)),
+            "7": self._reload_with_confirm,
+            "9": self.client.interactive_mode,
+        }
+
         while True:
-            print(f"\n{'='*50}")
-            print(f"Порт: {port} @ {self.ip}")
-            print("1. Повторить диагностику")
-            print("2. Перезагрузить порт")
-            print("3. MAC на порту")
-            print("4. Ошибки порта")
-            print("5. Проверить логи порта")
-            print("9. Сырой терминал")
-            print("0. Выход")
-            print("="*50)
+            print(f"\n{'=' * 50}")
+            print(f"Порт: {self.ip} {port}")
+            print("1. 🔁 Повторить диагностику")
+            print("2. 📊 Статус порта")
+            print("3. 📝 Конфигурация порта")
+            print("4. 🖧 MAC на порту")
+            print("5. ⚠️ Ошибки порта")
+            print("6. 📜 Логи порта")
+            print("7. 🔌 Перезагрузить порт")
+            print("9. 💻 Консоль")
+            print("0. 🚪 Выход")
+            print("=" * 50)
 
             choice = input("Выбор: ").strip()
+            if choice == "0":
+                break
+            if choice == "7":
+                actions["7"](port)
+                continue
+            action = actions.get(choice)
+            if action:
+                action()
+            else:
+                print("🤷 Неизвестный пункт")
 
-            match choice:
-                case "1":
-                    self.analyze_port(port)
-
-                case "2":
-                    confirm = input(f"⚠️ Дергаем {port}? (yes/no): ").strip().lower()
-                    if confirm == "y":
-                        full = input('Введите полностью "yes" для подтверждения: ').strip().lower()
-                        if full == "yes":
-                            print(self.reload_port(port))
-                        else:
-                            print("Команда отменена")
-                    elif confirm == "yes":
-                        print(self.reload_port(port))
-                    else:
-                        print("Команда отменена")
-
-                case "3":
-                    mac_info = self.get_mac_table(port)
-                    if mac_info['count'] > 0:
-                        print(f"📊 Найдено MAC-адресов: {mac_info['count']}")
-                        print("📋 Список MAC-адресов (первые 5):")
-                        for i, mac in enumerate(mac_info['macs'][:5], 1):
-                            print(f"   {i:2}. {mac}")
-                    else:
-                        print("❌ MAC-адреса не найдены на порту")
-
-                case "4":
-                    print(self.get_port_errors(port))
-
-                case "5":
-                    print(self.history_port(port))
-
-                case "9":
-                    self.client.interactive_mode()
-
-                case "0":
-                    break
-
-                case _:
-                    print("Неизвестный пункт")
+    def _reload_with_confirm(self, port):
+        if self._confirm(f"Дёргаем {port}?"):
+            print(self.reload_port(port))
+        else:
+            print("🚫 Отменено")

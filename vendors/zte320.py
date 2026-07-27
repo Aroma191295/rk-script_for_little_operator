@@ -105,7 +105,7 @@ class ZTE320Diagnostic:
             print("4. Статус медных портов")
             print("5. Уровень сигнала по оптики")
             print("6. Статус видео порта")
-            print("9. Сырой CLI")
+            print("9. Консоль")
             print("0. Выход")
             print("="*50)
 
@@ -117,7 +117,7 @@ class ZTE320Diagnostic:
 
                 case "2":
                     print(self.get_onu_info(port))
-                    
+
                 case "3":
                     mac_info = self.get_mac_table(port)
                     if mac_info['count'] > 0:
