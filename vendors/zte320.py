@@ -12,7 +12,6 @@ class ZTE320Diagnostic:
         self.client = client
         self.ip = client.ip
 
-        # Как в expect: без пейджинга --More--
         self._cmd("terminal length 0")
 
     def _onu(self, port):
