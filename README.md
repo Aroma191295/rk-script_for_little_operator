@@ -25,10 +25,10 @@ rk-scripts_for_the_litle_operator/
 │   ├── __init__.py      # Пустой файл, чтобы Python считал это пакетом
 │   ├── cdata.py         # WIP
 │   ├── eltex_eth.py
-│   ├── eltex_ltp.py     # WIP
+│   ├── eltex_ltp.py     
 │   ├── eltex_ma.py      # В планах
 │   ├── eltex_lte.py     # В планах
-│   ├── zte320.py        # WIP
+│   ├── zte320.py        
 │   ├── zte610.py        # В планах
 │   ├── snr.py           # В планах
 │   ├── zyxel.py         # В планах
@@ -38,7 +38,7 @@ rk-scripts_for_the_litle_operator/
     ├── qq.exp           # Быстрый вход
     ├── eltex_eth.exp    # Вход и быстрая диагностика медных eltex 
     ├── ltp.exp          # Вход и быстрая диагностика LTP
-    ├── cdata.exp        # WIP
+    ├── cdata.exp        # Не работает
     └── zte320.exp       # Вход и быстрая диагностика ZTE320
 ```
 
