@@ -43,7 +43,7 @@ rk-scripts_for_the_litle_operator/
 ```
 
 Скрипт для диагностики абонентских портов
-
+```
 positional arguments:
   ip                    IP адрес коммутатора
 
@@ -60,3 +60,4 @@ options:
     python3 main.py 10.0.0.1 -v eltex -p gi1/0/23
     python3 main.py 10.0.0.1 -v cdata
     python3 main.py 10.0.0.1 -P ssh
+```
