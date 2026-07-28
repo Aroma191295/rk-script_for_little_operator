@@ -17,6 +17,7 @@ from core.create_env import ensure_env_file
 from vendors.eltex_eth import EltexEthDiagnostic
 from vendors.zte320 import ZTE320Diagnostic
 from vendors.cdata import CDataDiagnostic
+from vendors.eltex_ltp import EltexLTPDiagnostic
 
 # Список вендоров с диагностикой
 VENDOR_CONFIG = {
@@ -38,12 +39,12 @@ VENDOR_CONFIG = {
     #     'env_user': 'USER_SSH',
     #     'env_pass': 'PASS_SSH',
     # },
-    # 'ltp': {
-    #     'class': EltexLTPDiagnostic,
-    #     'default_proto': 'telnet',
-    #     'env_user': 'USER',
-    #     'env_pass': 'PASS',
-    # },
+    'ltp': {
+        'class': EltexLTPDiagnostic,
+        'default_proto': 'telnet',
+        'env_user': 'USER',
+        'env_pass': 'PASS',
+    },
 }
 
 # Парсер .env файлов
@@ -151,7 +152,7 @@ def main():
     if proto == 'ssh':
         client = SSHClient(ip, username, password, debug=args.debug)
     else:
-        client = TelnetClient(ip, username, password)
+        client = TelnetClient(ip, username, password, debug=args.debug)
 
     if args.debug:
         print("🛠  DEBUG: сырой вывод команд включён\n")

@@ -2,7 +2,7 @@
 
 | Скрипт | Переменные |
 |--------|------------|
-| `qq.exp` | `USER`/`PASS`, для `admin` — `PASS_SSH` |
+| `qq.exp` | для telnet `USER`/`PASS`, для ssh `USER_SSH`/`PASS_SSH` |
 | `eltex_eth.exp`, `ltp.exp`, `zte320.exp` | `USER`/`PASS` |
 | `cdata.exp` | `USER_SSH`/`PASS_SSH` |
 

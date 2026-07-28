@@ -91,7 +91,7 @@ class EltexEthDiagnostic:
             return f"{port}: Down ({code}) — {LINK_STATE_HINTS[code]}"
 
         if re.search(r"\bUp\b", port_line, re.IGNORECASE):
-            return f"{port}: Up — линк есть"
+            return f"✅{port}: Up — линк есть"
 
         return f"{port}: статус не распознан\n{port_line}"
 
