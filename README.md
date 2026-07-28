@@ -9,7 +9,7 @@ USER_SSH
 PASS_SSH
 ```
 
-#Ветка проекта
+# Ветка проекта
 ```
 rk-scripts_for_the_litle_operator/
 │
@@ -42,7 +42,7 @@ rk-scripts_for_the_litle_operator/
     └── zte320.exp       # Вход и быстрая диагностика ZTE320
 ```
 
-Скрипт для диагностики абонентских портов
+# Как использовать
 ```
 positional arguments:
   ip                    IP адрес коммутатора
