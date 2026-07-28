@@ -42,3 +42,21 @@ rk-scripts_for_the_litle_operator/
     └── zte320.exp       # Вход и быстрая диагностика ZTE320
 ```
 
+Скрипт для диагностики абонентских портов
+
+positional arguments:
+  ip                    IP адрес коммутатора
+
+options:
+  -h, --help            show this help message and exit
+  -v {eltex,zte320,ltp}, --vendor {eltex,zte320,ltp}
+                        Вендор оборудования (автоматически задает протокол и учетные данные)
+  -p PORT, --port PORT  Номер порта для диагностики
+  --proto {telnet,ssh}, -P {telnet,ssh}
+                        Принудительно указать протокол (переопределяет настройку вендора)
+  --debug               debug
+
+Примеры использования:
+    python3 main.py 10.0.0.1 -v eltex -p gi1/0/23
+    python3 main.py 10.0.0.1 -v cdata
+    python3 main.py 10.0.0.1 -P ssh
