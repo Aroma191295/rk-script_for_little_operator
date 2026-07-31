@@ -7,6 +7,7 @@ USER
 PASS
 USER_SSH
 PASS_SSH
+PASS_ENABLE
 ```
 
 # Ветка проекта
@@ -26,7 +27,6 @@ rk-scripts_for_the_litle_operator/
 │   ├── cdata.py         # WIP
 │   ├── eltex_eth.py
 │   ├── eltex_ltp.py     
-│   ├── eltex_ma.py      # В планах
 │   ├── eltex_lte.py     # В планах
 │   ├── zte320.py        
 │   ├── zte610.py        # В планах
@@ -49,7 +49,7 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -v {eltex,zte320,ltp}, --vendor {eltex,zte320,ltp}
+  -v {eltex,zte320,ltp}, --vendor {eltex,zte320,ltp,ma4000}
                         Вендор оборудования (автоматически задает протокол и учетные данные)
   -p PORT, --port PORT  Номер порта для диагностики
   --proto {telnet,ssh}, -P {telnet,ssh}

@@ -2,8 +2,10 @@ import os
 import pty
 import re
 import select
+import shlex
 import subprocess
 import sys
+import tempfile
 import time
 
 
@@ -22,7 +24,14 @@ HOSTKEY_RE = re.compile(
     r'Are you sure you want to continue connecting',
     re.IGNORECASE,
 )
-PASSWORD_RE = re.compile(r'(?i)password\s*:?\s*$', re.MULTILINE)
+PASSWORD_RE = re.compile(
+    r'(?i)(?:password|passphrase|пароль)\s*:?\s*$',
+    re.MULTILINE,
+)
+AUTH_FAIL_RE = re.compile(
+    r'(?i)(permission denied|authentication failed|login incorrect|'
+    r'too many authentication failures)',
+)
 PROMPT_RE = re.compile(
     r'(?:' + '|'.join(CONFIG['prompt_patterns']) + r')\s*$',
     re.MULTILINE,
@@ -30,18 +39,70 @@ PROMPT_RE = re.compile(
 
 
 class SSHClient:
-    def __init__(self, ip, username, password, fallback_user=None, fallback_pass=None, debug=False):
+    def __init__(
+        self,
+        ip,
+        username,
+        password,
+        fallback_user=None,
+        fallback_pass=None,
+        enable_password=None,
+        debug=False,
+    ):
         self.ip = ip
         self.username = username
         self.password = password
         self.fallback_user = fallback_user
         self.fallback_pass = fallback_pass
+        self.enable_password = enable_password or password
         self.debug = debug
         self.proc = None
         self.master_fd = None
+        self._askpass_path = None
+
+    def _cleanup_askpass(self):
+        if self._askpass_path and os.path.exists(self._askpass_path):
+            try:
+                os.unlink(self._askpass_path)
+            except OSError:
+                pass
+        self._askpass_path = None
+
+    def _create_askpass(self, password):
+        """Временный askpass: OpenSSH надёжно забирает пароль отсюда, не из PTY."""
+        self._cleanup_askpass()
+        fd, path = tempfile.mkstemp(prefix='rk_ssh_askpass_', suffix='.sh')
+        try:
+            script = (
+                "#!/bin/sh\n"
+                f"printf '%s\\n' {shlex.quote(password)}\n"
+            )
+            os.write(fd, script.encode('utf-8'))
+        finally:
+            os.close(fd)
+        os.chmod(path, 0o700)
+        self._askpass_path = path
+        return path
+
+    def _ssh_env(self, password):
+        env = os.environ.copy()
+        for key in ('SSH_ASKPASS', 'SSH_ASKPASS_REQUIRE', 'SSH_AUTH_SOCK'):
+            env.pop(key, None)
+
+        askpass = self._create_askpass(password)
+        env['SSH_ASKPASS'] = askpass
+        # OpenSSH 8.4+: принудительно взять пароль из askpass
+        env['SSH_ASKPASS_REQUIRE'] = 'force'
+        # Нужен для старых OpenSSH, иначе askpass может не вызваться
+        env.setdefault('DISPLAY', ':0')
+        return env
 
     def connect(self):
         try:
+            if not self.password:
+                print("❌ Пароль SSH пустой — проверьте PASS_SSH в .env")
+                return False
+
             master, slave = pty.openpty()
             self.master_fd = master
 
@@ -53,8 +114,18 @@ class SSHClient:
                 '-o', 'LogLevel=ERROR',
                 '-o', 'PreferredAuthentications=password,keyboard-interactive',
                 '-o', 'PubkeyAuthentication=no',
+                '-o', 'IdentitiesOnly=yes',
+                '-o', 'IdentityAgent=none',
+                '-o', 'NumberOfPasswordPrompts=1',
                 f'{self.username}@{self.ip}',
             ]
+
+            if self.debug:
+                print(
+                    f"[DEBUG] SSH auth: user={self.username!r}, "
+                    f"pass_len={len(self.password)}",
+                    flush=True,
+                )
 
             self.proc = subprocess.Popen(
                 cmd,
@@ -63,11 +134,13 @@ class SSHClient:
                 stderr=slave,
                 close_fds=True,
                 preexec_fn=os.setsid,
+                env=self._ssh_env(self.password),
             )
             os.close(slave)
             return True
         except Exception as e:
             print(f"Ошибка подключения к {self.ip}: {e}")
+            self._cleanup_askpass()
             return False
 
     def _debug_print(self, text):
@@ -118,18 +191,19 @@ class SSHClient:
         return self.proc is not None and self.proc.poll() is None
 
     def _attempt_login(self, user, pwd):
-        """Аналог telnet._attempt_login: ждём password/hostkey/prompt."""
+        """Ждём hostkey/prompt/ошибку. Пароль SSH отдаёт askpass."""
         try:
-            # При смене пользователя нужно перезапустить ssh-сессию
-            if user != self.username:
+            if user != self.username or pwd != self.password:
                 self.disconnect()
                 self.username = user
+                self.password = pwd
                 if not self.connect():
                     return False
 
             timeout = CONFIG['ssh_timeout']
             end_time = time.time() + timeout
             buffer = ''
+            password_sent = False
 
             while time.time() < end_time:
                 chunk = self._read_available(timeout=0.5)
@@ -145,11 +219,15 @@ class SSHClient:
                     buffer = ''
                     continue
 
-                if PASSWORD_RE.search(clean):
+                if AUTH_FAIL_RE.search(clean):
+                    return False
+
+                # Fallback: если askpass не сработал и промпт пришёл в PTY
+                if not password_sent and PASSWORD_RE.search(clean):
                     self._write(pwd)
-                    # После пароля ждём промпт (или снова login-ошибку)
-                    matched = self._wait_for_prompt_or_password(timeout)
-                    return matched
+                    password_sent = True
+                    buffer = ''
+                    continue
 
                 if PROMPT_RE.search(clean):
                     return True
@@ -161,36 +239,11 @@ class SSHClient:
         except Exception:
             return False
 
-    def _wait_for_prompt_or_password(self, timeout=None):
-        timeout = timeout or CONFIG['ssh_timeout']
-        end_time = time.time() + timeout
-        buffer = ''
-
-        while time.time() < end_time:
-            chunk = self._read_available(timeout=0.5)
-            if chunk:
-                decoded = chunk.decode('utf-8', errors='ignore')
-                self._debug_print(decoded)
-                buffer += decoded
-
-            clean = self._clean(buffer)
-
-            if PROMPT_RE.search(clean):
-                return True
-
-            # Снова password / login failure — значит учётные данные не подошли
-            if PASSWORD_RE.search(clean) or re.search(
-                r'(?i)(permission denied|authentication failed|login incorrect)',
-                clean,
-            ):
-                return False
-
-            if not self._process_alive():
-                return False
-
-        return False
-
     def login(self):
+        if not self.password:
+            print("❌ Пароль SSH пустой — проверьте PASS_SSH в .env")
+            return False
+
         if self._attempt_login(self.username, self.password):
             return True
 
@@ -201,17 +254,10 @@ class SSHClient:
             )
             if self._attempt_login(self.fallback_user, self.fallback_pass):
                 return True
-
-            print("⚠️  Требуется переподключение для резервной попытки...")
-            self.disconnect()
-            self.username = self.fallback_user
-            if self.connect():
-                if self._attempt_login(self.fallback_user, self.fallback_pass):
-                    return True
         return False
 
     def enter_enable(self):
-        """Вход в привилегированный режим (нужен для C-Data OLT)."""
+        """Вход в привилегированный режим (C-Data / ZTE610 и др.)."""
         self._write('enable')
         time.sleep(0.3)
 
@@ -229,7 +275,7 @@ class SSHClient:
             clean = self._clean(buffer)
 
             if PASSWORD_RE.search(clean):
-                self._write(self.password)
+                self._write(self.enable_password)
                 buffer = ''
                 continue
 
@@ -288,7 +334,7 @@ class SSHClient:
 
                     # 3. Внезапный Password: (например после enable)
                     elif PASSWORD_RE.search(text):
-                        self._write(self.password)
+                        self._write(self.enable_password)
                         output = b''
                         continue
 
@@ -393,3 +439,5 @@ class SSHClient:
             except OSError:
                 pass
             self.master_fd = None
+
+        self._cleanup_askpass()

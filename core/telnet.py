@@ -19,6 +19,7 @@ LOGIN_PATTERNS = [
     b'[Uu]ser(?:name)?(?:\\s*[Nn]ame)?\\s*:',  # Username: / User Name:
     b'[Uu]ser\\s*:',                      # User:
     b'[Nn]ame\\s*:',
+    b'ma4000 login:',
 ]
 PASSWORD_PATTERNS = [
     b'[Pp]assword\\s*:',
@@ -77,15 +78,6 @@ class TelnetClient:
         self.tn.write(text.encode('ascii') + b'\r')
 
     def _attempt_login(self, user, pwd):
-        """
-        Логика как в ltp.exp / eltex_eth.exp:
-
-            expect {
-                "login"|"User"... { send user; exp_continue }
-                "Password:"       { send pass }
-            }
-            expect -re {[#>]$}
-        """
         try:
             timeout = CONFIG['telnet_timeout']
             got_password = False

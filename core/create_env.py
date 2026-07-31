@@ -7,16 +7,17 @@ ENV_VARS = (
     ("PASS", "Пароль Telnet (PASS)", True),
     ("USER_SSH", "Логин SSH (USER_SSH)", False),
     ("PASS_SSH", "Пароль SSH (PASS_SSH)", True),
+    ("PASS_ENABLE", "Пароль enable (PASS_ENABLE, Enter = как PASS_SSH)", True),
 )
 
 
-def _prompt(label: str, secret: bool = False) -> str:
+def _prompt(label: str, secret: bool = False, allow_empty: bool = False) -> str:
     while True:
         if secret:
             value = getpass.getpass(f"{label}: ").strip()
         else:
             value = input(f"{label}: ").strip()
-        if value:
+        if value or allow_empty:
             return value
         print("⚠️ Значение не может быть пустым, попробуйте ещё раз. Ctrl+C для отмены.")
 
@@ -36,7 +37,11 @@ def ensure_env_file(script_dir: str | None = None) -> str:
 
     values = {}
     for key, label, secret in ENV_VARS:
-        values[key] = _prompt(label, secret=secret)
+        allow_empty = key == "PASS_ENABLE"
+        values[key] = _prompt(label, secret=secret, allow_empty=allow_empty)
+
+    if not values["PASS_ENABLE"]:
+        values["PASS_ENABLE"] = values["PASS_SSH"]
 
     try:
         with open(path, "w", encoding="utf-8") as f:

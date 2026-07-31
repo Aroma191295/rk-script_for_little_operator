@@ -18,6 +18,7 @@ from vendors.eltex_eth import EltexEthDiagnostic
 from vendors.zte320 import ZTE320Diagnostic
 from vendors.cdata import CDataDiagnostic
 from vendors.eltex_ltp import EltexLTPDiagnostic
+from vendors.zte610 import ZTE610Diagnostic
 
 # Список вендоров с диагностикой
 VENDOR_CONFIG = {
@@ -45,6 +46,19 @@ VENDOR_CONFIG = {
         'env_user': 'USER',
         'env_pass': 'PASS',
     },
+    # 'ma4000': {
+    #     'class': EltexLTPDiagnostic,
+    #     'default_proto': 'telnet',
+    #     'env_user': 'USER_SSH',
+    #     'env_pass': 'PASS_SSH',
+    # },
+    'zte610': {
+        'class': ZTE610Diagnostic,
+        'default_proto': 'ssh',
+        'env_user': 'USER',
+        'env_pass': 'PASS',
+    },
+
 }
 
 # Парсер .env файлов
@@ -149,8 +163,14 @@ def main():
 
     print(f"👤 Пользователь: {username}")
 
+    enable_password = os.environ.get('PASS_ENABLE') or password
+
     if proto == 'ssh':
-        client = SSHClient(ip, username, password, debug=args.debug)
+        client = SSHClient(
+            ip, username, password,
+            enable_password=enable_password,
+            debug=args.debug,
+        )
     else:
         client = TelnetClient(ip, username, password, debug=args.debug)
 
