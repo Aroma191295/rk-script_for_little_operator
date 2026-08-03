@@ -100,7 +100,14 @@ class EltexEthDiagnostic:
         return output or "Конфигурация порта не найдена"
 
     def get_port_errors(self, port):
-        output = self._cmd(f"show interfaces counters {port}")
+        try:
+            self._cmd("terminal datadump")
+            output = self._cmd(f"show interfaces counters {port}")
+        finally:
+            self._cmd("no terminal datadump")
+        return self._format_port_errors(output)
+
+    def _format_port_errors(self, output):
         if not output:
             return "Не удалось получить счётчики"
 
@@ -123,17 +130,26 @@ class EltexEthDiagnostic:
         print(f"Анализ порта {port} на {self.ip}")
         print(f"{'=' * 70}\n")
 
-        print("Статус:")
-        status = self.get_port_status(port)
-        print(status, end="\n\n")
+        status = config = errors = ""
+        # Как в eltex_eth.exp: datadump на длинные show, затем MAC без пейджера
+        try:
+            self._cmd("terminal datadump")
 
-        print("Конфигурация:")
-        config = self.get_port_config(port)
-        print(config, end="\n\n")
+            print("Статус:")
+            status = self.get_port_status(port)
+            print(status, end="\n\n")
 
-        print("Ошибки:")
-        errors = self.get_port_errors(port)
-        print(errors, end="\n\n")
+            print("Конфигурация:")
+            config = self.get_port_config(port)
+            print(config, end="\n\n")
+
+            print("Ошибки:")
+            errors = self._format_port_errors(
+                self._cmd(f"show interfaces counters {port}")
+            )
+            print(errors, end="\n\n")
+        finally:
+            self._cmd("no terminal datadump")
 
         print("MAC:")
         mac_info = self.get_mac_table(port)

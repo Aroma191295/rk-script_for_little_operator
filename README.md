@@ -29,7 +29,7 @@ rk-scripts_for_the_litle_operator/
 │   ├── eltex_ltp.py     
 │   ├── eltex_lte.py     # В планах
 │   ├── zte320.py        
-│   ├── zte610.py        # В планах
+│   ├── zte610.py        
 │   ├── snr.py           # В планах
 │   ├── zyxel.py         # В планах
 │   └── dlink.py         # В планах
@@ -49,11 +49,15 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -v {eltex,zte320,ltp}, --vendor {eltex,zte320,ltp,ma4000}
+
+  -v {eltex,zte320,ltp,ma4000,zte610}, --vendor {eltex,zte320,ltp,ma4000,zte610}
                         Вендор оборудования (автоматически задает протокол и учетные данные)
+
   -p PORT, --port PORT  Номер порта для диагностики
+
   --proto {telnet,ssh}, -P {telnet,ssh}
                         Принудительно указать протокол (переопределяет настройку вендора)
+                        
   --debug               debug
 
 Примеры использования:

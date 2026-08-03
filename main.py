@@ -95,10 +95,12 @@ def main():
         description="""Перед запуском прочитайте readme
 Скрипт для диагностики абонентских портов""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""Примеры использования:
-    python3 main.py 10.0.0.1 -v eltex -p gi1/0/23
-    python3 main.py 10.0.0.1 -v cdata
-    python3 main.py 10.0.0.1 -P ssh"""
+        epilog="""
+        Примеры использования:
+        python3 main.py 10.0.0.1 -v eltex -p fa1/0/23
+        python3 main.py 10.0.0.1 -v zte320 -p 1/0/2:1
+        python3 main.py 10.0.0.1 -P ssh
+        """
     )
 # Обязательные аргументы
     parser.add_argument("ip", help="IP адрес коммутатора")
@@ -122,7 +124,6 @@ def main():
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="debug"
     )
 
     if len(sys.argv) == 1:

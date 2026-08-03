@@ -182,14 +182,31 @@ class TelnetClient:
                         continue
 
                     text = output.decode('utf-8', errors='ignore')
+                    text_lower = text.lower()
 
-                    if PROMPT_RE.search(text):
-                        break
-                    elif 'more' in text.lower():
+                    # Eltex: "All: a, More:" / "--More--"
+                    if (
+                        'more' in text_lower
+                        or 'all: a,' in text_lower
+                    ) and not PROMPT_RE.search(text):
                         self.tn.write(b" ")
                         time.sleep(0.2)
                         continue
-                    else:
+
+                    if PROMPT_RE.search(text):
+                        # Дочитываем хвост: иначе следующая команда
+                        # попадает в пейджер и теряет префикс (show …)
+                        time.sleep(0.25)
+                        tail = self.tn.read_very_eager()
+                        if tail:
+                            self._debug_print("settle_tail", tail)
+                            output += tail
+                            continue
+                        break
+
+                    if 'more' in text_lower or 'all: a,' in text_lower:
+                        self.tn.write(b" ")
+                        time.sleep(0.2)
                         continue
 
             final_output = output.decode('utf-8', errors='ignore')
