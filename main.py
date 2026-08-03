@@ -46,12 +46,12 @@ VENDOR_CONFIG = {
         'env_user': 'USER',
         'env_pass': 'PASS',
     },
-    # 'ma4000': {
-    #     'class': EltexLTPDiagnostic,
-    #     'default_proto': 'telnet',
-    #     'env_user': 'USER_SSH',
-    #     'env_pass': 'PASS_SSH',
-    # },
+    'ma4000': {
+        'class': EltexLTPDiagnostic,
+        'default_proto': 'telnet',
+        'env_user': 'USER_SSH',
+        'env_pass': 'PASS_SSH',
+    },
     'zte610': {
         'class': ZTE610Diagnostic,
         'default_proto': 'ssh',
